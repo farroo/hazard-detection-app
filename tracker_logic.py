@@ -10,6 +10,9 @@ class HazardDetector:
         self.prev_centroids = {}
         
     def process_frame(self, frame):
+        # Enforce Spatial Normalization (Resize input frame to 640x640 for fast inference)
+        frame = cv2.resize(frame, (640, 640))
+        
         height, width, _ = frame.shape
         
         # Run YOLO tracking (ByteTrack) across frames
@@ -37,10 +40,10 @@ class HazardDetector:
                 cy = int(y2)
                 current_centroids[track_id] = (cx, cy)
                 
-                # 1. Proximity Hazard Check (Evaluates bounding box coordinates relative to the bottom threshold)[cite: 3]
+                # 1. Proximity Hazard Check (Evaluates bounding box coordinates relative to the bottom threshold)
                 is_close_proximity = y2 > hazard_line_y
                 
-                # 2. Wrong-Way Movement Check (Cross-verifies actor movement vectors against expected traffic direction)[cite: 3]
+                # 2. Wrong-Way Movement Check (Cross-verifies actor movement vectors against expected traffic direction)
                 is_wrong_way = False
                 if track_id in self.prev_centroids:
                     prev_cx, prev_cy = self.prev_centroids[track_id]
@@ -49,10 +52,10 @@ class HazardDetector:
                 
                 # Determine Box Color & Alert Message
                 if is_wrong_way:
-                    color = (0, 0, 255) # Red for Wrong-Way Hazard[cite: 3]
+                    color = (0, 0, 255) # Red for Wrong-Way Hazard
                     alert_text = f"ID:{track_id} WRONG WAY!"
                 elif is_close_proximity:
-                    color = (0, 165, 255) # Orange for High Proximity Warning[cite: 3]
+                    color = (0, 165, 255) # Orange for High Proximity Warning
                     alert_text = f"ID:{track_id} CLOSE PROXIMITY"
                 else:
                     color = (0, 255, 0) # Green for Safe
