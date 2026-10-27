@@ -28,5 +28,4 @@ jobs:
 
     - name: Run basic validation test
       run: |
-        # Run pytest or check if core files and model weights exist and load properly
-        python -c "import torch; model = torch.load('best.pt', map_location='cpu'); print('Model loaded successfully in CI!')"
+        python -c "from ultralytics import YOLO; model = YOLO('best.pt'); print('Model loaded successfully via Ultralytics in CI!')"
