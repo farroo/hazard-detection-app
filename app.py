@@ -15,9 +15,12 @@ st.set_page_config(
 st.title("🚗 Autonomous Driving Scene Understanding & Real-Time Hazard Detection")
 st.markdown("""
 This interactive web application processes driving video clips to detect multi-class road actors, 
-compute spatial proximity collision risks, and track wrong-way movement using **ByteTrack** and fine-tuned regional YOLO weights[cite: 2, 3].
+compute spatial proximity collision risks, and track wrong-way movement using **ByteTrack** and fine-tuned regional YOLO weights.
 """)
-
+st.sidebar.markdown("---")
+st.sidebar.subheader("📐 Hazard Zone Geometry Tuning")
+zone_width = st.sidebar.slider("Zone Width Spread", min_value=0.1, max_value=0.5, value=0.15, step=0.05)
+zone_horizon = st.sidebar.slider("Zone Horizon Height", min_value=0.3, max_value=0.7, value=0.55, step=0.05)
 # Load the Hazard Detector model using cached resource for speed
 @st.cache_resource
 def load_detector():
@@ -73,7 +76,7 @@ if vid_path is not None:
         out_path = out_file.name
         
         fourcc = cv2.VideoWriter_fourcc(*'VP90')
-        out = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
+        out = cv2.VideoWriter(out_path, fourcc, fps, (640, 640))  # Updated to match 640x640 frame size
         
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         current_frame = 0
@@ -85,7 +88,7 @@ if vid_path is not None:
                 if not ret:
                     break
                 
-                processed_frame = detector.process_frame(frame)
+                processed_frame = detector.process_frame(frame, zone_width=zone_width, zone_horizon=zone_horizon)
                 out.write(processed_frame)
                 
                 rgb_frame = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
@@ -103,5 +106,20 @@ if vid_path is not None:
         st.success("Processing finished successfully!")
         st.subheader("Processed Output Video")
         st.video(out_path)
+        
+        # --- NEW: Automated Incident Summary Analytics Dashboard ---
+        summary = detector.get_incident_summary()
+        
+        st.markdown("---")
+        st.subheader("📊 Automated Hazard Analytics & Incident Report")
+        
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        col_m1.metric("Total Frames Analyzed", summary["total_frames"])
+        col_m2.metric("Wrong-Way Violations", summary["wrong_way_count"])
+        col_m3.metric("Zone Proximity Events", summary["proximity_count"])
+        col_m4.metric("Critical TTC Alerts (<1.5s)", summary["ttc_critical_count"])
+        
+        st.write("**Detected Actor Distribution:**")
+        st.json(summary["detected_classes"])
 else:
     st.info("👈 Select a pre-loaded sample video or upload a file from the sidebar to begin analysis.")
